@@ -16,3 +16,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+package 'bash'
+package 'git'
+package 'gitlab'
+package 'gitlab-shell'
+package 'postgresql93-client'
+package 'postgresql93-server'
+package 'postgresql93-contrib'
+
+service 'postgresql' do
+  action :enable
+end
+
+# that's a bit weird I know but if postgres is not enabled, initdb wouldn't run
+execute 'sysrc postgresql_enable=YES && service postgresql initdb' do
+  not_if { node['gitlab_freebsd']['postgresql']['init_done'] }
+end
+
+ruby_block 'set_postgresql_init_done_true' do
+  block do
+    node.set['gitlab_freebsd']['postgresql']['init_done'] = true
+  end
+end
+
+service 'postgresql' do
+  supports status: true, restart: true, enable: true, start: true
+  action [:enable, :start]
+end
+
+
+bash 'create_user' do
+  user 'pgsql'
+  code <<-EOF
+    psql -d template1 -c "CREATE USER IF NOT EXISTS git CREATEDB SUPERUSER;"
+    psql -d template1 -c "CREATE DATABASE IF NOT EXISTS gitlabhq_production OWNER git;"
+    psql -d gitlabhq_production -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+  EOF
+end
+
+cookbook_file '/usr/local/etc/redis.conf' do
+  source 'redis.conf'
+end
+
+group 'redis' do
+  members %w(git)
+  append true
+  action :modify
+end
+
+service 'redis' do
+  action [ :enable, :start ]
+end
+
+
+bash 'git_configurations_for_gitlab' do
+  code <<-EOF
+    git config --global core.autocrlf input
+    git config --global gc.auto 0
+  EOF
+end
+
