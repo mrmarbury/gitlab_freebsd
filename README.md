@@ -2,7 +2,7 @@
 
 This Cookbook installs a standalone GitLab including postgresql on a FreeBSD Server
 
-**WARNING: This is currently a pretty basic version. It will get cleaned up and refined in the next version. So please treat
+**WARNING: This is currently a pretty basic version. It will get cleaned up and refined in the next versions. So please treat
 it as software in alpha stage**
 
 **INFO:** If you install Gitlab in a Jail, please make sure that sysvipc is actiated in order for postgresql to work!
