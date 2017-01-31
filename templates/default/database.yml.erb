@@ -1,0 +1,15 @@
+#
+# PRODUCTION
+#
+production:
+  adapter: <%= @adapter %>
+  encoding: <%= @encoding %>
+  database: <%= @database %>
+  pool: <%= @pool %>
+  username: <%= @username %>
+  <% if @set_password %>
+  password: <%= @password %>
+  <% end %>
+  host: <%= @host %>
+  port: <%= @port %>
+
