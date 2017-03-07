@@ -1,3 +1,5 @@
+default['gitlab_freebsd']['cidr'] = 8
+
 default['gitlab_freebsd']['postgresql']['init_done'] = false
 default['gitlab_freebsd']['gitlab']['is_configured'] = false
 
@@ -16,12 +18,15 @@ default['gitlab_freebsd']['database_yml']['pool_size'] = 10
 
 # false on local passwordless install
 default['gitlab_freebsd']['database_yml']['set_password'] = false
-# set this, if set__password == true
+# set this, if set_password == true
 default['gitlab_freebsd']['database_yml']['password'] = ''
 
-# if nil, fqdn will be used. 'localhost' is a save bet for local installations
-default['gitlab_freebsd']['database_yml']['host'] = 'localhost'
-default['gitlab_freebsd']['database_yml']['port'] = 5432
+default['gitlab_freebsd']['database_yml']['host'] = nil
+default['gitlab_freebsd']['database_yml']['port'] = nil
 
 # SET THIS PASSWORD THROUGH A VAULT! THIS VALUE IS FOR AUTOMATIC TESTING ONLY!
 default['gitlab_freebsd']['root_user_password'] = 'gitlab'
+
+
+default['gitlab_freebsd']['nginx_gitlab']['enable_ipv4'] = true
+default['gitlab_freebsd']['nginx_gitlab']['enable_ipv6'] = false

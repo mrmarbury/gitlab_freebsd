@@ -10,6 +10,10 @@ production:
   <% if @set_password %>
   password: <%= @password %>
   <% end %>
+  <% if @host %>
   host: <%= @host %>
+  <% end %>
+  <%if @port %>
   port: <%= @port %>
+  <% end %>
 

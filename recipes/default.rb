@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO: Clean this up, maybe make thius a bunch of recipes
+# TODO: Clean this up, maybe make this a bunch of recipes
 
 package 'bash'
 package 'cmake'
@@ -43,6 +43,17 @@ end
 service 'postgresql' do
   supports status: true, restart: true, enable: true, start: true
   action [:enable, :start]
+end
+
+ruby_block 'add_pg_hba_conf_entry' do
+  block do
+    cidr = node['gitlab_freebsd']['cidr']
+    line = "host    all    all    #{node['ipaddress']}/#{cidr}    trust"
+    file = Chef::Util::FileEdit.new('/usr/local/pgsql/data/pg_hba.conf')
+    file.insert_line_if_no_match(/^.*#{node['ipaddress']}\/#{cidr}.*$/, "#{line}")
+    file.write_file
+  end
+  notifies :restart, 'service[postgresql]', :immediately
 end
 
 git_user = node['gitlab_freebsd']['user']
@@ -102,7 +113,7 @@ template ::File.join gitlab_conf_dir, 'database.yml' do
       username: git_user,
       set_password: node['gitlab_freebsd']['database_yml']['set_password'],
       password: node['gitlab_freebsd']['database_yml']['password'],
-      host: node['gitlab_freebsd']['database_yml']['host'] || node['fqdn'],
+      host: node['gitlab_freebsd']['database_yml']['host'],
       port: node['gitlab_freebsd']['database_yml']['port']
   )
 end
@@ -137,13 +148,16 @@ ruby_block 'set_gitlab_is_configured_flag' do
   end
 end
 
-# Under some circumstances this file exists with the wrong permissions, if it exists at all.
+# Under some circumstances these files exists with the wrong permissions, if it exists at all.
 # But then it will lead to HTTP 500
-app_log_file = ::File.join gitlab_dir, 'log/application.log'
-file app_log_file do
-  owner git_user
-  only_if { ::File.exists? app_log_file}
+%w( log/application.log .gitlab_workhorse_secret ).each do |f|
+  gfile = ::File.join gitlab_dir, f
+  file gfile do
+    owner git_user
+    only_if { ::File.exists? gfile}
+  end
 end
+
 # Somehow :start sends 'faststart', which fails ... of course
 service 'gitlab' do
   start_command 'service gitlab start'
@@ -152,12 +166,23 @@ end
 
 directory '/var/log/nginx'
 
+template '/usr/local/www/gitlab/lib/support/nginx/gitlab' do
+  source 'nginx_gitlab.erb'
+  mode '0444'
+  variables(
+      enable_ipv4: node['gitlab_freebsd']['nginx_gitlab']['enable_ipv4'],
+      enable_ipv6: node['gitlab_freebsd']['nginx_gitlab']['enable_ipv6'],
+      fqdn: node['fqdn']
+  )
+  notifies :restart, 'service[nginx]', :delayed
+end
+
 cookbook_file '/usr/local/etc/nginx/nginx.conf' do
   source 'nginx.conf'
   owner 'root'
   group 'wheel'
   mode '644'
-  notifies :reload, 'service[nginx]', :delayed
+  notifies :restart, 'service[nginx]', :delayed
 end
 
 service 'nginx' do
